@@ -33,4 +33,4 @@ class BaseManagement:
             return print(f'A column {current_arg.upper()} you tried to create is already exists. Check you request for '
                          f'other duplicates')
 
-        return print(f'Table {args[0][0]} has been created')
+        return print(f'Table {args[0]} has been created')
