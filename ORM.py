@@ -59,6 +59,20 @@ class BaseManagement:
         return print(f'The table -- {table_name} -- has been REMOVED')
 
 #TODO add insert method
+    def insert(self, table_name, **kwargs):
+        if kwargs['onepiece']:
+            self.cursor.execute(f'INSERT INTO {table_name} VALUES({kwargs["onepiece"]});')
+            self.con.commit()
+            return print('Row has been added')
+        else:
+            query_column = str()
+            query_value = str()
+            for key, value in kwargs.items():
+                query_column += f'{key}, '
+                query_value += f'{value}, '
+            self.cursor.execute(f'INSERT INTO {table_name}({query_column[:-2]}) VALUES({query_value[:-2]})')
+            self.con.commit()
+            return print('Row has been added')
 
 #TODO add update method
 
