@@ -5,8 +5,8 @@ class BaseManagement:
 
     def __init__(self, bd_name):
         self.bd_name = bd_name
-        con = sqlite3.connect(self.bd_name)
-        self.cursor = con.cursor()
+        self.con = sqlite3.connect(self.bd_name)
+        self.cursor = self.con.cursor()
 
     def insert_column(self, table_name, column_name, column_type):
         try:
@@ -17,6 +17,8 @@ class BaseManagement:
         except sqlite3.OperationalError:
             return print(f'A column {column_name} you tried to create is already exists. Check you request for '
                          f'other duplicates')
+        finally:
+            self.con.commit()
         return print(f'Column {column_name} with type {column_type.upper()} has been added')
 
     def create_table(self, *args):
@@ -33,8 +35,8 @@ class BaseManagement:
         self.cursor.execute(f'CREATE TABLE IF NOT EXISTS {args[0]} ('
                             f'id INTEGER PRIMARY KEY AUTOINCREMENT,\n'
                             f'{query_body[:-2]}\n'
-                            f')')
-
+                            f');')
+        self.con.commit()
         return print(f'Table {args[0]} has been created')
 
     def select(self, selector, table_name):
@@ -42,3 +44,7 @@ class BaseManagement:
             f'SELECT {selector} FROM {table_name}'
         )
         print(self.cursor.fetchall())
+
+    def drop_table(self, table_name):
+        self.cursor.execute(f'DROP TABLE IF EXISTS {table_name};')
+        self.con.commit()
