@@ -15,8 +15,8 @@ class BaseManagement:
                 f'ADD COLUMN IF NOT EXISTS {column_name} {column_type.upper()};'
             )
         except sqlite3.OperationalError:
-            return print(f'A column -- {column_name} -- you tried to create is already exists. Check you request for '
-                         f'other duplicates')
+            return print(f'ERROR OCCURRED! The column -- {column_name} -- you tried to create is already exists. '
+                         f'Check you request for other duplicates')
         finally:
             self.con.commit()
         return print(f'Column -- {column_name} -- with type -- {column_type.upper()} -- has been ADDED')
@@ -39,7 +39,7 @@ class BaseManagement:
             references = f'REFERENCES {references.split()[0]} ({references.split()[1]})'
 
         self.cursor.execute(f'CREATE TABLE IF NOT EXISTS {args[0]} ('
-                            f'id INTEGER PRIMARY KEY AUTOINCREMENT,\n'
+                            #f'id INTEGER PRIMARY KEY AUTOINCREMENT,\n'
                             f'{query_body[:-2]}{foreign_key} {references}'
                             f');')
         self.con.commit()
@@ -58,21 +58,32 @@ class BaseManagement:
         self.con.commit()
         return print(f'The table -- {table_name} -- has been REMOVED')
 
-#TODO add insert method
     def insert(self, table_name, **kwargs):
-        if kwargs['onepiece']:
-            self.cursor.execute(f'INSERT INTO {table_name} VALUES({kwargs["onepiece"]});')
-            self.con.commit()
-            return print('Row has been added')
+        """ Use key word construction 'onepiece'='argument, argument, etc' for inserting row at once. """
+        if kwargs.get('onepiece') is not None:
+            try:
+                values = tuple([i.strip() for i in kwargs['onepiece'].split(',')])
+                self.cursor.execute(f'INSERT INTO {table_name} VALUES {values}')
+                self.con.commit()
+                return print('Row has been added')
+            except sqlite3.OperationalError:
+                return print('ERROR OCCURRED! Columns amount in the table does not match the amount in your query')
         else:
-            query_column = str()
-            query_value = str()
-            for key, value in kwargs.items():
-                query_column += f'{key}, '
-                query_value += f'{value}, '
-            self.cursor.execute(f'INSERT INTO {table_name}({query_column[:-2]}) VALUES({query_value[:-2]})')
-            self.con.commit()
-            return print('Row has been added')
+            try:
+                query_column = []
+                query_value = []
+                for key, value in kwargs.items():
+                    query_column.append(key)
+                    query_value.append(value)
+                if len(query_column) > 1:
+                    self.cursor.execute(f'INSERT INTO {table_name} {tuple(query_column)} VALUES {tuple(query_value)}')
+                    self.con.commit()
+                else:
+                    self.cursor.execute(f'INSERT INTO {table_name} ("{query_column[0]}") VALUES ("{query_value[0]}")')
+                    self.con.commit()
+                return print('Row has been added')
+            except sqlite3.OperationalError:
+                return print('ERROR OCCURRED! Check columns names in your query')
 
 #TODO add update method
 
