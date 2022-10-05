@@ -112,4 +112,16 @@ class BaseManagement:
         self.con.commit()
         return print(f'Update operation for table -- {table_name} -- has been done')
 
-#TODO add delete method
+    def delete_from_table(self, table_name, target=None):
+        if target is not None:
+            self.cursor.execute(
+                f'DELETE FROM {table_name} WHERE {target}'
+            )
+            self.con.commit()
+            return print(f'Deleting from table -- {table_name} -- done')
+        else:
+            self.cursor.execute(
+                f'DELETE FROM {table_name}'
+            )
+            self.con.commit()
+            return print(f'All rows from -- {table_name} --have been deleted')
