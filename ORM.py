@@ -17,7 +17,8 @@ class BaseManagement:
                 'str': 'STRING',
                 'string': 'STRING',
                 'bytes': 'BLOB',
-                'None': 'NULL'
+                'None': 'NULL',
+                'none': 'NULL'
             }
             return types[what_to_adapt]
         except KeyError:
@@ -39,15 +40,15 @@ class BaseManagement:
     def create_table(self, *args, foreign_key=None, references=None):
         """ Use the following construction [column_name, column_type]. Type by default is TEXT.
             In [column_type] you can set PRIMARY KEY, AUTOINCREMENT, NOT NULL etc: ['office_name', 'text not null'].
-            To set foreign_key='table_key' and references='table_name table_key'.
+            To set ONLY ONE foreign_key='table_key' and references='table_name table_key'.
             The very first argument must contain only a string with a table name. """
 
         query_body = str()
         for arg in args[1:]:
-            if len(arg) < 1 or arg[1] not in ['int', 'integer', 'float', 'str', 'string', 'bytes']:
+            if len(arg) < 1 or arg[1].split()[0] not in ['int', 'integer', 'float', 'str', 'string', 'bytes']:
                 query_body += f'{arg[0]} TEXT,\n'
             else:
-                query_body += f'{arg[0]} {self.type_adapter(arg[1])},\n'
+                query_body += f'{arg[0]} {self.type_adapter(arg[1].split()[0])} {arg[1].split()[1:]},\n'
 
         if foreign_key is not None:
             foreign_key = f',\nFOREIGN KEY ({foreign_key})'
@@ -60,7 +61,7 @@ class BaseManagement:
         return print(f'Table -- {args[0]} -- has been CREATED')
 
 #TODO increase functionality of the method
-    def select(self, selector, table_name):
+    def select_all(self, selector, table_name):
         self.cursor.execute(
             f'SELECT {selector} FROM {table_name}'
         )
@@ -72,12 +73,14 @@ class BaseManagement:
         self.con.commit()
         return print(f'The table -- {table_name} -- has been REMOVED')
 
+#TODO review function
     def insert(self, table_name, **kwargs):
         """ Use key word construction 'onepiece'='argument, argument, etc' for inserting row at once.
             Use named argument for inserting certain key-value pairs."""
         if kwargs.get('onepiece') is not None:
             try:
                 values = tuple([i.strip() for i in kwargs['onepiece'].split(',')])
+                print(values)
                 self.cursor.execute(f'INSERT INTO {table_name} VALUES {values}')
                 self.con.commit()
                 return print('Row has been added')
