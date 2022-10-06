@@ -9,19 +9,23 @@ class BaseManagement:
         self.cursor = self.con.cursor()
 
     def type_adapter(self, what_to_adapt):
+        types = {
+            'int': 'INTEGER',
+            'integer': 'INTEGER',
+            'float': 'REAL',
+            'str': 'TEXT',
+            'string': 'TEXT',
+            'bytes': 'BLOB',
+            'none': 'NULL'
+        }
         try:
-            types = {
-                'int': 'INTEGER',
-                'integer': 'INTEGER',
-                'float': 'REAL',
-                'str': 'STRING',
-                'string': 'STRING',
-                'bytes': 'BLOB',
-                'None': 'NULL',
-                'none': 'NULL'
-            }
-            return types[what_to_adapt]
-        except KeyError:
+            if types.get(what_to_adapt.lower()) is not None:
+                return types[what_to_adapt.lower()]
+            elif what_to_adapt.upper() in types.values():
+                return what_to_adapt.upper()
+            else:
+                raise ValueError
+        except ValueError:
             return print(f'The type of value -- {what_to_adapt} -- is not acceptable')
 
     def add_column(self, table_name, column_name, column_type):
@@ -38,18 +42,19 @@ class BaseManagement:
         return print(f'Column -- {column_name} -- with type -- {column_type.upper()} -- has been ADDED')
 
     def create_table(self, *args, foreign_key=None, references=None):
-        """ Use the following construction [column_name, column_type]. Type by default is TEXT.
-            In [column_type] you can set PRIMARY KEY, AUTOINCREMENT, NOT NULL etc: ['office_name', 'text not null'].
-            To set ONLY ONE foreign_key='table_key' and references='table_name table_key'.
+        """ Use the following construction [column_name, column_type, column_options]. Type by default is TEXT.
+            In [column_options] you can set PRIMARY KEY, AUTOINCREMENT, NOT NULL etc: ['table_name', 'text', 'primary key not null'].
+            You can set ONLY ONE foreign_key='table_key' and references='table_name table_key'.
             The very first argument must contain only a string with a table name. """
 
         query_body = str()
         for arg in args[1:]:
-            if len(arg) < 1 or arg[1].split()[0] not in ['int', 'integer', 'float', 'str', 'string', 'bytes']:
+            if len(arg) < 1:
                 query_body += f'{arg[0]} TEXT,\n'
+            elif len(arg) > 2:
+                query_body += f'{arg[0]} {self.type_adapter(arg[1])} {arg[2]},\n'
             else:
-                query_body += f'{arg[0]} {self.type_adapter(arg[1].split()[0])} {arg[1].split()[1:]},\n'
-
+                query_body += f'{arg[0]} {self.type_adapter(arg[1])},\n'
         if foreign_key is not None:
             foreign_key = f',\nFOREIGN KEY ({foreign_key})'
             references = f'REFERENCES {references.split()[0]} ({references.split()[1]})'
@@ -60,10 +65,9 @@ class BaseManagement:
         self.con.commit()
         return print(f'Table -- {args[0]} -- has been CREATED')
 
-#TODO increase functionality of the method
-    def select_all(self, selector, table_name):
+    def select_all(self, table_name):
         self.cursor.execute(
-            f'SELECT {selector} FROM {table_name}'
+            f'SELECT * FROM {table_name}'
         )
         print(self.cursor.fetchall())
 
@@ -73,39 +77,33 @@ class BaseManagement:
         self.con.commit()
         return print(f'The table -- {table_name} -- has been REMOVED')
 
-#TODO review function
-    def insert(self, table_name, **kwargs):
-        """ Use key word construction 'onepiece'='argument, argument, etc' for inserting row at once.
-            Use named argument for inserting certain key-value pairs."""
-        if kwargs.get('onepiece') is not None:
-            try:
-                values = tuple([i.strip() for i in kwargs['onepiece'].split(',')])
-                print(values)
-                self.cursor.execute(f'INSERT INTO {table_name} VALUES {values}')
-                self.con.commit()
-                return print('Row has been added')
-            except sqlite3.OperationalError:
-                return print('ERROR OCCURRED! Columns amount in the table does not match the amount in your query')
-        else:
-            try:
-                query_column = []
-                query_value = []
-                for key, value in kwargs.items():
-                    query_column.append(key)
-                    query_value.append(value)
-                if len(query_column) > 1:
-                    self.cursor.execute(f'INSERT INTO {table_name} {tuple(query_column)} VALUES {tuple(query_value)}')
+    def insert(self, table_name, column_names, *column_values):
+        """
+        Use construction to set values
+        :param ('table_name'):
+        :param ('column_names'):
+        :param ('column_values'):
+        :return: printed status of inserting operation
+        """
+        try:
+            for arg in column_values:
+                if isinstance(column_names, str):
+                    self.cursor.execute(
+                        f'INSERT INTO {table_name}("{column_names}") VALUES("{arg}");'
+                    )
                     self.con.commit()
                 else:
-                    self.cursor.execute(f'INSERT INTO {table_name} ("{query_column[0]}") VALUES ("{query_value[0]}")')
+                    self.cursor.execute(
+                        f'INSERT INTO {table_name}{column_names} VALUES{arg};'
+                    )
                     self.con.commit()
-                return print('Row has been added')
-            except sqlite3.OperationalError:
-                return print('ERROR OCCURRED! Check columns names in your query')
+            return print(f'Rows have been added into -- {table_name} --')
+        except sqlite3.OperationalError:
+            return print(f'ERROR OCCURRED during inserting in -- {table_name} --! Check you query parameters: table name, column name or values')
 
     def update(self, table_name, target, **kwargs):
         """ Use kwargs for setting the parameters to update.
-            Target for setting WHERE conditions. """
+            Target for setting WHERE conditions: UPDATE {table_name} SET {kwargs} WHERE {target} """
         query_body = str()
         for key, value in kwargs.items():
             query_body += f"'{key}'='{value}', "
